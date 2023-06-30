@@ -59,16 +59,38 @@ class Spreadsheet {
     }
 
     public void evaluate() {
-        for (List<Cell> row : grid) {
-            for (Cell cell : row) {
-                if (!cell.isNumber())
-                    evaluateCell(cell);
+        final int MAX_ITERATIONS = 1000;
+        int iterations = 0;
+
+        while (true) {
+            boolean allEvaluated = true;
+
+            for (List<Cell> row : grid) {
+                for (Cell cell : row) {
+                    String value = cell.getValue();
+
+                    if (!cell.isNumber() && value.startsWith("#")) {
+                        allEvaluated = false;
+                        evaluateCell(cell);
+                    }
+                }
             }
+
+            if (allEvaluated || iterations >= MAX_ITERATIONS) {
+                break;
+            }
+
+            iterations++;
+        }
+
+        if (iterations >= MAX_ITERATIONS) {
+            System.out.println("Evaluation stopped due to suspected circular dependencies or complex calculations.");
         }
     }
 
     private void evaluateCell(Cell cell) {
         String value = cell.getValue();
+
         if (value.equals("#hl")) {
             // ... existing horizontal line logic
         } else if (value.startsWith("#(sum")) {
@@ -79,9 +101,10 @@ class Spreadsheet {
                 int[] coordinates = parseCoordinates(cellRef);
                 if (coordinates != null) {
                     Cell referencedCell = grid.get(coordinates[0]).get(coordinates[1]);
-                    if (referencedCell.isNumber()) {
-                        sum += Double.parseDouble(referencedCell.getValue());
+                    if (!referencedCell.isNumber()) {
+                        return;
                     }
+                    sum += Double.parseDouble(referencedCell.getValue());
                 }
             }
 
@@ -95,12 +118,10 @@ class Spreadsheet {
                 int[] coordinates = parseCoordinates(cellRef);
                 if (coordinates != null) {
                     Cell referencedCell = grid.get(coordinates[0]).get(coordinates[1]);
-                    if (referencedCell.isNumber()) {
-                        product *= Double.parseDouble(referencedCell.getValue());
-                    } else {
-                        product = 0.0; // Set the product to 0 if any referenced cell is not a number
-                        break;
+                    if (!referencedCell.isNumber()) {
+                        return;
                     }
+                    product *= Double.parseDouble(referencedCell.getValue());
                 }
             }
 
